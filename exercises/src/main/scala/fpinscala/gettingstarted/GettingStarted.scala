@@ -47,6 +47,9 @@ object MyModule {
     stepUp(0, 1, 0, n)
   }
 
+  //Compared to answer: I used one extra argument by iterating *up to* a target instead of *down to* zero
+  //I plan to keep my answers prior to looking at the actual answer, then note the differences
+
   // This definition and `formatAbs` are very similar..
   private def formatFactorial(n: Int) = {
     val msg = "The factorial of %d is %d."
@@ -149,7 +152,24 @@ object PolymorphicFunctions {
 
   // Exercise 2: Implement a polymorphic function to check whether
   // an `Array[A]` is sorted
-  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = ???
+  def isSorted[A](as: Array[A], gt: (A,A) => Boolean): Boolean = {
+    //we need to keep track of our index, right?
+    @annotation.tailrec
+    def reduceOnCond(eval: Boolean, idx: Int): Boolean = {
+      if(as.length == 0 || as.length == 1) true
+      else if (idx == as.length -1) eval
+      else {
+        val thisEval = eval && gt(as(idx), as(idx+1))
+        if(thisEval) reduceOnCond(thisEval, idx+1)
+        else false
+      }
+    }
+
+    reduceOnCond(eval = true, 0)
+  }
+
+  //Compared to answer: I did this a little differently. I like their answer more.
+  //My answer is correct, but could have been simpler
 
   // Polymorphic functions are often so constrained by their type
   // that they only have one implementation! Here's an example:
