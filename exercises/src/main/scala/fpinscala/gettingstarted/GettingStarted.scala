@@ -36,7 +36,16 @@ object MyModule {
 
   // Exercise 1: Write a function to compute the nth fibonacci number
 
-  def fib(n: Int): Int = ???
+  def fib(n: Int): Int = {
+    //this was tricky because you cannot have two recursive calls
+    //added together (tail recursion)
+    @annotation.tailrec
+    def stepUp(lesser: Int, larger: Int, step: Int, target: Int): Int =
+      if(step == target) lesser
+      else stepUp(larger, lesser+larger, step+1, target)
+
+    stepUp(0, 1, 0, n)
+  }
 
   // This definition and `formatAbs` are very similar..
   private def formatFactorial(n: Int) = {
