@@ -49,18 +49,52 @@ object List { // `List` companion object. Contains functions for creating and wo
   def product2(ns: List[Double]) =
     foldRight(ns, 1.0)(_ * _) // `_ * _` is more concise notation for `(x,y) => x * y`; see sidebar
 
+  //answer compare: did not throw an exception because I thought those were avoided in FP :-)
+  def tail[A](l: List[A]): List[A] = l match {
+    case Nil => Nil
+    case Cons(_, t) => t
+  }
 
-  def tail[A](l: List[A]): List[A] = ???
+  //answer compare: dead on!
+  def setHead[A](l: List[A], h: A): List[A] = l match {
+    case Nil => sys.error("No head to replace")
+    case Cons(_,t) => Cons(h,t)
+  }
 
-  def setHead[A](l: List[A], h: A): List[A] = ???
+  //Answer compare: I threw an error on trying to drop from an empty list
+  def drop[A](l: List[A], n: Int): List[A] = l match {
+    case Nil => sys.error("Nothing to drop")
+    case Cons(_,t) => drop(t,n-1)
+  }
 
-  def drop[A](l: List[A], n: Int): List[A] = ???
 
-  def dropWhile[A](l: List[A], f: A => Boolean): List[A] = ???
+  //Answer comparison: significant diversion, if not incorrect. I threw an error. Also used a previous fn
+  //Pattern guard, a feature I wasn't aware of, does indeed make this easier!
+  @scala.annotation.tailrec
+  def dropWhile[A](l: List[A], f: A => Boolean): List[A] = {
+    def getHead: A = l match {
+      case Nil => sys.error("No head")
+      case Cons(h,_) => h
+    }
 
-  def init[A](l: List[A]): List[A] = ???
+    if(f(getHead)){
+      dropWhile(tail(l), f)
+    } else {
+      l
+    }
+  }
 
-  def length[A](l: List[A]): Int = ???
+  //Answer comparison: Close! I did not throw an exception on initializing Nil
+  def init[A](l: List[A]): List[A] =
+  l match {
+    case Cons(_, Nil) => Nil
+    case Cons(h,t) => Cons(h, init(t))
+  }
+
+  //Answer comparison: Dead on!
+  def length[A](l: List[A]): Int = {
+    foldRight(l, 0)((_, y) => 1 + y)
+  }
 
   def foldLeft[A,B](l: List[A], z: B)(f: (B, A) => B): B = ???
 
