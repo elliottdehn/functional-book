@@ -163,4 +163,9 @@ object List { // `List` companion object. Contains functions for creating and wo
   def map[A,B](l: List[A])(f: A => B): List[B] = {
     foldRight(l, Nil:List[B])((ne, acc) => Cons(f(ne), acc))
   }
+
+  //Answer comparison: I knew the "real" solution was a buffer, but my fold right solution is correct
+  def filter[A](l: List[A], f: A => Boolean): List[A] = {
+    foldRight(l, Nil:List[A])((ne, acc) => if(f(ne)) Cons(ne, acc) else acc)
+  }
 }
