@@ -168,4 +168,44 @@ object List { // `List` companion object. Contains functions for creating and wo
   def filter[A](l: List[A], f: A => Boolean): List[A] = {
     foldRight(l, Nil:List[A])((ne, acc) => if(f(ne)) Cons(ne, acc) else acc)
   }
+
+  //Answer comparison: could have used map and made this a lot simpler
+  def flatMap[A, B](l: List[A], f: A => List[A]): List[A] = {
+    val buf = new collection.mutable.ListBuffer[List[A]]
+    def go(l: List[A]): Unit = l match {
+      case Nil => ()
+      case Cons(h,t) => buf += f(h); go(t)
+    }
+    go(l)
+    flatten(List(buf.toList: _*))
+  }
+
+  //Answer comparison: dead on!
+  def filter_fm[A](l: List[A], f: A => Boolean): List[A] = {
+    flatMap(l, x => if (f(x)) Cons(x, Nil) else Nil:List[A])
+  }
+
+  //Answer compare: close, just didn't have cases for _,Nil and Nil,_
+  def addLists(l1: List[Int], l2: List[Int]): List[Int] = (l1, l2) match {
+    case (Cons(h1, t1), Cons(h2, t2)) => Cons(h1 + h2, addLists(t1, t2))
+  }
+
+  //Answer compare: nailed it!
+  def zipWith[A, B, C](l1: List[A], l2: List[B])(f: (A, B) => C): List[C] = (l1, l2) match {
+    case (_, Nil) => Nil
+    case (Nil,_) => Nil
+    case (Cons(h1, t1), Cons(h2, t2)) => Cons(f(h1,h2), zipWith(t1,t2)(f))
+  }
+
+  //Answer compare: I got pretty close! I did it in one method and I'm not 100% sure mine is actually correct
+  //but it is in the same vein: seek the start of the subsequence, then check if you find it. Else keep searching.
+  //Return false if you reach the end of the list.
+  @scala.annotation.tailrec
+  def subsequence[A](l: List[A], sq: List[A]): Boolean = (l, sq) match {
+    case (Nil, Cons(_,_)) => false
+    case (_, Nil) => true
+    case (Cons(h, t), Cons(hsq, tsq)) if h == hsq => subsequence(t,tsq)
+    case (Cons(_, t), Cons(_, _)) => subsequence(t, sq)
+  }
+
 }
