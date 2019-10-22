@@ -54,7 +54,8 @@ object Tree {
     fold(t)(_ => 0)(_ max _)
   }
 
-  def tree_map2[A, B](t: Tree[A])(f: A => Tree[B]): Tree[B] = {
-    fold[A, Tree[B]](t)(x => f(x))((l, r) => Branch(l, r))
+  //also had to fix some type annotations here
+  def tree_map2[A, B](t: Tree[A])(f: A => B): Tree[B] = {
+    fold(t)(x => Leaf(f(x)): Tree[B])((l, r) => Branch(l, r))
   }
 }
