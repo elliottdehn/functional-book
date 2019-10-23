@@ -17,15 +17,65 @@ trait Stream[+A] {
     case Empty => None
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
-  def take(n: Int): Stream[A] = ???
 
-  def drop(n: Int): Stream[A] = ???
+  def toList: List[A] = {
+    this.foldRight(List())((h, acc) => h :: acc)
+  }
 
-  def takeWhile(p: A => Boolean): Stream[A] = ???
+  //incorrect
+  def take_incorrect(n: Int): Stream[A] = this match {
+    case Empty => Empty
+    case Cons(h, t) if n > 0 => Cons(h, () => t().take(n-1))
+    case _ => this
+  }
 
-  def forAll(p: A => Boolean): Boolean = ???
+  //correct take
+  def take(n: Int): Stream[A] = this match {
+    case Cons(h, t) if n > 1 => cons(h(), t().take(n - 1))
+    case Cons(h, _) if n == 1 => cons(h(), empty)
+    case _ => empty
+  }
 
-  def headOption: Option[A] = ???
+  def drop(n: Int): Stream[A] = this match {
+    case Empty => Empty
+    case Cons(_, t) if n > 0 => t().drop(n-1)
+    case _ => this
+  }
+
+  def takeWhile(p: A => Boolean): Stream[A] = this match {
+    case Empty => Empty
+    case Cons(h, t) if p(h) => Cons(h, () => t().takeWhile(p))
+    case _ => this
+  }
+
+  def forAll(p: A => Boolean): Boolean = {
+    this.foldRight(false)((h, t) => p(h) || t)
+  }
+
+  def takeWhile_2(p: A => Boolean): Stream[A] = {
+    this.foldRight(Empty)((h, t) => if(p(h)) t else Empty)
+  }
+
+  def headOption: Option[A] = {
+    this.foldRight(None[A])((h, _) => Some(h))
+  }
+
+  def map[B](f: => A => B): Stream[B] = {
+    this.foldRight(Empty[B])((h, t) => cons(f(h), t))
+  }
+
+  def filter(f: A => Boolean): Stream[A] = {
+    this.foldRight(Empty[A])((h, t) => if(f(h)) cons(h, t) else t)
+  }
+
+  def append[B>:A](l: => Stream[B]): Stream[B] = {
+    this.foldRight(l)((h, t) => cons(h, t))
+  }
+
+  def flatmap[B](f: A => Option[B]): Stream[Option[B]] = {
+    this.map(f).foldRight(Empty[A])((h, t) => cons(f(h), t))
+  }
+
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
