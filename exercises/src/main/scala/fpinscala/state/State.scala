@@ -145,10 +145,12 @@ case class State[S,+A](run: S => (A, S)) {
 
   object State {
     type Rand[A] = State[RNG, A]
-    def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
+    def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
+      State(m => )
+    }
     def unit_s[S, A](a: A): State[S, A] =
       State(s => (a, s))
-    
+
     // The idiomatic solution is expressed via foldRight
     def sequenceViaFoldRight[S,A](sas: List[State[S, A]]): State[S, List[A]] =
       sas.foldRight(unit_s[S, List[A]](List()))((f, acc) => f.map2(acc)(_ :: _))
