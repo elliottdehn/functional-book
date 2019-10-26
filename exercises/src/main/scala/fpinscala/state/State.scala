@@ -148,6 +148,19 @@ case class State[S,+A](run: S => (A, S)) {
     def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
     def unit_s[S, A](a: A): State[S, A] =
       State(s => (a, s))
+    
+    // The idiomatic solution is expressed via foldRight
+    def sequenceViaFoldRight[S,A](sas: List[State[S, A]]): State[S, List[A]] =
+      sas.foldRight(unit_s[S, List[A]](List()))((f, acc) => f.map2(acc)(_ :: _))
+
+    def modify[S](f: S => S): State[S, Unit] = for {
+      s <- get // Gets the current state and assigns it to `s`.
+      _ <- set(f(s)) // Sets the new state to `f` applied to `s`.
+    } yield ()
+
+    def get[S]: State[S, S] = State(s => (s, s))
+
+    def set[S](s: S): State[S, Unit] = State(_ => ((), s))
   }
 }
 
