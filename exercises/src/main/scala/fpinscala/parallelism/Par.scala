@@ -16,7 +16,9 @@ object Par {
     def isCancelled = false 
     def cancel(evenIfRunning: Boolean): Boolean = false 
   }
-  
+
+  def lazyUnit[A](a: => A): Par[A] = ???
+
   def map2[A,B,C](a: Par[A], b: Par[B])(f: (A,B) => C): Par[C] = // `map2` doesn't evaluate the call to `f` in a separate logical thread, in accord with our design choice of having `fork` be the sole function in the API for controlling parallelism. We can always do `fork(map2(a,b)(f))` if we want the evaluation of `f` to occur in a separate thread.
     (es: ExecutorService) => {
       val af = a(es) 
@@ -29,10 +31,29 @@ object Par {
       def call = a(es).get
     })
 
+  def asyncF[A,B](f: A => B): A => Par[B] = {
+    a: A => lazyUnit(f(a))
+  }
+
   def map[A,B](pa: Par[A])(f: A => B): Par[B] = 
     map2(pa, unit(()))((a,_) => f(a))
 
   def sortPar(parList: Par[List[Int]]) = map(parList)(_.sorted)
+
+  def sequence[A](ps: List[Par[A]]): Par[List[A]] = {
+    ps.foldRight(unit(List[A]()))((pa, acc) => map2(pa, acc)((a, la) => a :: la))
+  }
+
+  def parFilter[A](as: List[A])(f: A => Boolean): Par[List[A]] = {
+    unit(as.foldRight(List[A]())((h, acc) => {if (f(h)) h :: acc else acc}))
+  }
+
+  /*correct answer
+  def parFilter[A](l: List[A])(f: A => Boolean): Par[List[A]] = {
+  val pars: List[Par[List[A]]] =
+    l map (asyncF((a: A) => if (f(a)) List(a) else List()))
+  map(sequence(pars))(_.flatten) // convenience method on `List` for concatenating a list of lists
+   */
 
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = 
     p(e).get == p2(e).get
