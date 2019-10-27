@@ -85,16 +85,32 @@ object Par {
     es => g(l, run(es)(f).get())(es)
   }
 
+  def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = {
+    es => choices(run(es)(pa).get())(es)
+  }
+
   def choice_2_gen[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = {
     general_choice(List(t, f))(cond)((ls, b) => if(b) ls.head else ls(1))
+  }
+
+  def choice_2_ch[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = {
+    chooser(cond)(b => if(b) t else f)
   }
 
   def choice_N_gen[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = {
     general_choice(choices)(n)((ls, idx) => ls(idx))
   }
 
+  def choice_N_ch[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = {
+    chooser(n)(idx => choices(idx))
+  }
+
   def choice_map_gen[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] = {
     general_choice(choices)(key)((cs, k) => cs(k))
+  }
+
+  def choice_map_ch[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] = {
+    chooser(key)(k => choices(k))
   }
 
   /* Gives us infix syntax for `Par`. */
