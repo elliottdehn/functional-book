@@ -81,6 +81,22 @@ object Par {
     choiceN(es => if(run(es)(cond).get) UnitFuture(0) else UnitFuture(1))( List(t, f))
   }
 
+  def general_choice[I>:Iterable[Par[A]],B, A](l: I)(f: Par[B])(g: (I, B) => Par[A]): Par[A] = {
+    es => g(l, run(es)(f).get())(es)
+  }
+
+  def choice_2_gen[A](cond: Par[Boolean])(t: Par[A], f: Par[A]): Par[A] = {
+    general_choice(List(t, f))(cond)((ls, b) => if(b) ls.head else ls(1))
+  }
+
+  def choice_N_gen[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = {
+    general_choice(choices)(n)((ls, idx) => ls(idx))
+  }
+
+  def choice_map_gen[K, V](key: Par[K])(choices: Map[K, Par[V]]): Par[V] = {
+    general_choice(choices)(key)((cs, k) => cs(k))
+  }
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
