@@ -85,6 +85,16 @@ object Par {
     es => g(l, run(es)(f).get())(es)
   }
 
+  /*
+  Correct impl
+   */
+
+  def chooser[A,B](p: Par[A])(choices: A => Par[B]): Par[B] =
+    es => {
+      val k = run(es)(p).get
+      run(es)(choices(k))
+    }
+
   def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = {
     es => choices(run(es)(pa).get())(es)
   }
