@@ -123,12 +123,19 @@ object Par {
     chooser(key)(k => choices(k))
   }
 
+  def join[A](a: Par[Par[A]]): Par[A] = {
+    es => run(es)(a).get()(es)
+  }
+
+  //Correct:
+  // see nonblocking implementation in `Nonblocking.scala`
+  def join[A](a: Par[Par[A]]): Par[A] =
+    es => run(es)(run(es)(a).get())
+
   /* Gives us infix syntax for `Par`. */
   implicit def toParOps[A](p: Par[A]): ParOps[A] = new ParOps(p)
 
   class ParOps[A](p: Par[A]) {
-
-
   }
 }
 
