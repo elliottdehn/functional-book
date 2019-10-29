@@ -1,8 +1,14 @@
 package fpinscala.testing
 
-import fpinscala.state
-import fpinscala.state.RNG
-import fpinscala.state.RNG.State
+import fpinscala.laziness.Stream
+import fpinscala.state._
+import fpinscala.parallelism._
+import fpinscala.parallelism.Par.Par
+import Gen._
+import Prop._
+import java.util.concurrent.{Executors,ExecutorService}
+import language.postfixOps
+import language.implicitConversions
 
 /*
 The library developed in this chapter goes through several iterations. This file is just the
@@ -30,9 +36,18 @@ object Prop {
 case class Gen[+A](sample: State[RNG, A])
 
 object Gen {
-  def choose(start: Int, stopExclusive: Int): Gen[Int] = {
-    Gen(State(RNG.nonNegativeInt).map(n => start + n % (stopExclusive - start)))
+  def choose(start: Int, stopExclusive: Int): Gen[Int] =
+    Gen(State(RNG.nonNegativeInt).map(n => start + n % (stopExclusive-start)))
+
+  def unit[A](a: => A): Gen[A] = {
+    Gen(State.unit_s(a))
   }
+
+  def boolean: Gen[Boolean] = {
+    Gen(State(RNG.boolean))
+  }
+
+  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = ???
 }
 
 trait Gen[A] {

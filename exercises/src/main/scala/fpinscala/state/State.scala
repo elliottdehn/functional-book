@@ -1,13 +1,11 @@
 package fpinscala.state
 
-import fpinscala.state.RNG.flatMap
-
-
 trait RNG {
   def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
 }
 
 object RNG {
+
   // NB - this was called SimpleRNG in the book text
 
   case class Simple(seed: Long) extends RNG {
@@ -19,14 +17,10 @@ object RNG {
     }
   }
 
-  type Rand[+A] = RNG => (A, RNG)
-
-  val int: Rand[Int] = _.nextInt
-
   def unit[A](a: A): Rand[A] =
     rng => (a, rng)
 
-  def map[A,B](s: Rand[A])(f: A => B): Rand[B] =
+  def map[A, B](s: Rand[A])(f: A => B): Rand[B] =
     rng => {
       val (a, rng2) = s(rng)
       (f(a), rng2)
@@ -39,24 +33,24 @@ object RNG {
 
   def double(rng: RNG): (Double, RNG) = {
     val (i, r) = nonNegativeInt(rng)
-    (i.toDouble/Int.MaxValue.toDouble, r)
+    (i.toDouble / Int.MaxValue.toDouble, r)
   }
 
-  def intDouble(rng: RNG): ((Int,Double), RNG) = {
+  def intDouble(rng: RNG): ((Int, Double), RNG) = {
     val ip = rng.nextInt
     val dp = double(ip._2)
     val tuple = (ip._1, dp._1)
     (tuple, dp._2)
   }
 
-  def doubleInt(rng: RNG): ((Double,Int), RNG) = {
+  def doubleInt(rng: RNG): ((Double, Int), RNG) = {
     val dp = double(rng)
     val ip = dp._2.nextInt
     val tuple = (dp._1, ip._1)
     (tuple, ip._2)
   }
 
-  def double3(rng: RNG): ((Double,Double,Double), RNG) = {
+  def double3(rng: RNG): ((Double, Double, Double), RNG) = {
     val dp1 = double(rng)
     val dp2 = double(dp1._2)
     val dp3 = double(dp2._2)
@@ -69,6 +63,10 @@ object RNG {
     case 0 => (List[c Int](), rng)
     case a => (rng.nextInt :: ints(count - 1)(rng)._1, rng)
   }*/
+
+  type Rand[+A] = RNG => (A, RNG)
+
+  val int: Rand[Int] = _.nextInt
 
   // A tail-recursive solution
   /*
@@ -84,7 +82,7 @@ object RNG {
   } */
 
   def double2(rng: RNG): Rand[Double] = {
-    map(nonNegativeInt)(i => i/Int.MaxValue.toDouble + 1)
+    map(nonNegativeInt)(i => i / Int.MaxValue.toDouble + 1)
   }
 
   /*
@@ -93,7 +91,7 @@ object RNG {
   }
   */
 
-  def map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+  def map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
     rng => {
       val (a, r1) = ra(rng)
       val (b, r2) = rb(r1)
@@ -104,16 +102,19 @@ object RNG {
   def sequence[A](fs: List[Rand[A]]): Rand[List[A]] = fs match {
   }*/
 
-  def flatMap[A,B](f: Rand[A])(g: A => Rand[B]): Rand[B] = {
+  def flatMap[A, B](f: Rand[A])(g: A => Rand[B]): Rand[B] = {
     rng: RNG => {
       lazy val res = f(rng)
       g(res._1)(res._2)
     }
   }
 
-  def map_f[A,B](s: Rand[A])(f: A => B): Rand[B] = {
+  def map_f[A, B](s: Rand[A])(f: A => B): Rand[B] = {
     flatMap(s)(a => unit(f(a)))
   }
+
+  def boolean(rng: RNG): (Boolean, RNG) =
+    rng.nextInt match { case (i,rng2) => (i%2==0,rng2) }
 
   /*
   def map2_f[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
@@ -123,8 +124,9 @@ object RNG {
       ((r1, r2), g2)})((a, b: Ra) => )
 }*/
 
-  def _map2[A,B,C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
+  def _map2[A, B, C](ra: Rand[A], rb: Rand[B])(f: (A, B) => C): Rand[C] =
     flatMap(ra)(a => map(rb)(b => f(a, b)))
+}
 
 case class State[S,+A](run: S => (A, S)) {
   def map[B](f: A => B): State[S, B] =
@@ -137,17 +139,12 @@ case class State[S,+A](run: S => (A, S)) {
   })
 }
 
-  sealed trait Input
-  case object Coin extends Input
-  case object Turn extends Input
-
-  case class Machine(locked: Boolean, candies: Int, coins: Int)
-
-  object State {
+object State {
     type Rand[A] = State[RNG, A]
+    /*
     def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
       State(m => )
-    }
+    }*/
     def unit_s[S, A](a: A): State[S, A] =
       State(s => (a, s))
 
@@ -163,6 +160,15 @@ case class State[S,+A](run: S => (A, S)) {
     def get[S]: State[S, S] = State(s => (s, s))
 
     def set[S](s: S): State[S, Unit] = State(_ => ((), s))
-  }
+}
+
+sealed trait Input
+case object Coin extends Input
+case object Turn extends Input
+
+case class Machine(locked: Boolean, candies: Int, coins: Int)
+
+object Candy {
+  def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = ???
 }
 
