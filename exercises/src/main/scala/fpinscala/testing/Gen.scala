@@ -1,8 +1,9 @@
 package fpinscala.testing
 
-import fpinscala.state._
-
+import fpinscala.laziness.Stream
+import fpinscala.state.{RNG, _}
 import fpinscala.state.RNG.Simple
+import fpinscala.testing.Prop.{FailedCase, Falsified, Passed, Result, SuccessCount, TestCases}
 
 import language.postfixOps
 import language.implicitConversions
@@ -12,22 +13,44 @@ The library developed in this chapter goes through several iterations. This file
 shell, which you can fill in and modify while working through the chapter.
 */
 
-trait Prop {
-  def check: Boolean
-  /*
-  def &&(p: Prop): Boolean = {
-   check && p.check
-  }
-  */
-
-  /* We can refer to the enclosing `Prop` instance with `Prop.this` */
-  def &&(p: Prop): Prop = new Prop {
-    def check: Boolean = Prop.this.check && p.check
-  }
+sealed trait Result {
+  def isFalsified: Boolean
 }
 
+case object Passed extends Result {
+  def isFalsified = false
+}
+
+case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
+  def isFalsified = true
+}
+case class Prop(run: (TestCases,RNG) => Result)
+
 object Prop {
-  def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
+  type SuccessCount = Int
+  type FailedCase = String
+  type TestCases = Int
+
+  /* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
+  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
+    Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+
+  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop {
+    (n,rng) => randomStream(as)(rng).zip(Stream.from(0)).take(n).map {
+      case (a, i) => try {
+        if (f(a)) Passed else Falsified(a.toString, i)
+      } catch { case e: Exception => Falsified(buildMsg(a, e), i) }
+    }.find(_.isFalsified).getOrElse(Passed)
+  }
+
+
+  // String interpolation syntax. A string starting with `s"` can refer to
+  // a Scala value `v` as `$v` or `${v}` in the string.
+  // This will be expanded to `v.toString` by the Scala compiler.
+  def buildMsg[A](s: A, e: Exception): String =
+    s"test case: $s\n" +
+      s"generated an exception: ${e.getMessage}\n" +
+      s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
 }
 
 case class Gen[+A](sample: State[RNG, A]) {
