@@ -149,7 +149,7 @@ object State {
       State(s => (a, s))
 
     // The idiomatic solution is expressed via foldRight
-    def sequenceViaFoldRight[S,A](sas: List[State[S, A]]): State[S, List[A]] =
+    def sequence[S,A](sas: List[State[S, A]]): State[S, List[A]] =
       sas.foldRight(unit_s[S, List[A]](List()))((f, acc) => f.map2(acc)(_ :: _))
 
     def modify[S](f: S => S): State[S, Unit] = for {

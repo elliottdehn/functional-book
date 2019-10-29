@@ -1,12 +1,9 @@
 package fpinscala.testing
 
-import fpinscala.laziness.Stream
 import fpinscala.state._
-import fpinscala.parallelism._
-import fpinscala.parallelism.Par.Par
-import Gen._
-import Prop._
-import java.util.concurrent.{Executors,ExecutorService}
+
+import fpinscala.state.RNG.Simple
+
 import language.postfixOps
 import language.implicitConversions
 
@@ -33,7 +30,23 @@ object Prop {
   def forAll[A](gen: Gen[A])(f: A => Boolean): Prop = ???
 }
 
-case class Gen[+A](sample: State[RNG, A])
+case class Gen[+A](sample: State[RNG, A]) {
+  def map[B](f: A => B): Gen[B] = {
+    Gen(sample.map(f))
+  }
+
+  def flatMap[B](f: A => Gen[B]): Gen[B] = {
+    Gen(State(s => {
+      val (a, rng) = sample.run(s)
+      f(a).sample.run(rng)
+    }))
+  }
+
+  def listOfN(size: Gen[Int]): Gen[List[A]] = {
+    size.flatMap(i => Gen(State.sequence(List.fill(i)(sample))))
+  }
+
+}
 
 object Gen {
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
@@ -43,16 +56,28 @@ object Gen {
     Gen(State.unit_s(a))
   }
 
+  def genOption[A](g: Gen[A]): Gen[Option[A]] = {
+    genMap(g)(a => Some(a))
+  }
+
+  def genFromOption[A](g: Gen[Option[A]]): Gen[A] = {
+    genMap(g)(o => o.get)
+  }
+
+  def genMap[A,B](g: Gen[A])(f: A => B): Gen[B] = {
+    Gen(g.sample.map(f))
+  }
+
   def boolean: Gen[Boolean] = {
     Gen(State(RNG.boolean))
   }
 
-  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = ???
-}
+  def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
+    Gen(State.sequence(List.fill(n)(g.sample)))
 
-trait Gen[A] {
-  def map[A,B](f: A => B): Gen[B] = ???
-  def flatMap[A,B](f: A => Gen[B]): Gen[B] = ???
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = {
+    boolean.flatMap(b => if (b) g1 else g2)
+  }
 }
 
 trait SGen[+A] {
