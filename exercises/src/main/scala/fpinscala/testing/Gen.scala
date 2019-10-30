@@ -1,10 +1,12 @@
 package fpinscala.testing
 
 import fpinscala.laziness.Stream
-import fpinscala.state.{RNG, _}
-import fpinscala.state.RNG.Simple
-import fpinscala.testing.Prop.{FailedCase, Falsified, Passed, Result, SuccessCount, TestCases}
-
+import fpinscala.state._
+import fpinscala.parallelism._
+import fpinscala.parallelism.Par.Par
+import Gen._
+import Prop._
+import java.util.concurrent.{Executors,ExecutorService}
 import language.postfixOps
 import language.implicitConversions
 
@@ -13,23 +15,53 @@ The library developed in this chapter goes through several iterations. This file
 shell, which you can fill in and modify while working through the chapter.
 */
 
-sealed trait Result {
-  def isFalsified: Boolean
-}
+case class Prop(run: (MaxSize,TestCases,RNG) => Result) {
+  def &&(p: Prop) = Prop {
+    (max,n,rng) => run(max,n,rng) match {
+      case Passed => p.run(max, n, rng)
+      case x => x
+    }
+  }
 
-case object Passed extends Result {
-  def isFalsified = false
-}
+  def ||(p: Prop) = Prop {
+    (max,n,rng) => run(max,n,rng) match {
+      // In case of failure, run the other prop.
+      case Falsified(msg, _) => p.tag(msg).run(max,n,rng)
+      case x => x
+    }
+  }
 
-case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
-  def isFalsified = true
+  /* This is rather simplistic - in the event of failure, we simply prepend
+   * the given message on a newline in front of the existing message.
+   */
+  def tag(msg: String) = Prop {
+    (max,n,rng) => run(max,n,rng) match {
+      case Falsified(e, c) => Falsified(msg + "\n" + e, c)
+      case x => x
+    }
+  }
 }
-case class Prop(run: (TestCases,RNG) => Result)
 
 object Prop {
   type SuccessCount = Int
-  type FailedCase = String
   type TestCases = Int
+  type MaxSize = Int
+  type FailedCase = String
+
+  sealed trait Result {
+    def isFalsified: Boolean
+  }
+  case object Passed extends Result {
+    def isFalsified = false
+  }
+  case class Falsified(failure: FailedCase,
+                       successes: SuccessCount) extends Result {
+    def isFalsified = true
+  }
+  case object Proved extends Result {
+    def isFalsified = false
+  }
+
 
   /* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
@@ -51,6 +83,37 @@ object Prop {
     s"test case: $s\n" +
       s"generated an exception: ${e.getMessage}\n" +
       s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
+
+  def apply(f: (TestCases,RNG) => Result): Prop =
+    Prop { (_,n,rng) => f(n,rng) }
+
+  def forAll[A](g: SGen[A])(f: A => Boolean): Prop =
+    forAll(g)(f)
+
+  def forAll[A](g: Int => Gen[A])(f: A => Boolean): Prop = Prop {
+    (max,n,rng) =>
+      val casesPerSize = (n - 1) / max + 1
+      val props: Stream[Prop] =
+        Stream.from(0).take((n min max) + 1).map(i => forAll(g(i))(f))
+      val prop: Prop =
+        props.map(p => Prop { (max, n, rng) =>
+          p.run(max, casesPerSize, rng)
+        }).toList.reduce(_ && _)
+      prop.run(max,n,rng)
+  }
+
+  def run(p: Prop,
+          maxSize: Int = 100,
+          testCases: Int = 100,
+          rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit =
+    p.run(maxSize, testCases, rng) match {
+      case Falsified(msg, n) =>
+        println(s"! Falsified after $n passed tests:\n $msg")
+      case Passed =>
+        println(s"+ OK, passed $testCases tests.")
+      case Proved =>
+        println(s"+ OK, proved property.")
+    }
 }
 
 case class Gen[+A](sample: State[RNG, A]) {
@@ -67,6 +130,10 @@ case class Gen[+A](sample: State[RNG, A]) {
 
   def listOfN(size: Gen[Int]): Gen[List[A]] = {
     size.flatMap(i => Gen(State.sequence(List.fill(i)(sample))))
+  }
+
+  implicit def unsized: SGen[A] = {
+    SGen(_ => this)
   }
 
 }
@@ -118,7 +185,12 @@ object Gen {
    */
 }
 
-trait SGen[+A] {
+case class SGen[+A](forSize: Int => Gen[A]) {
+}
 
+object SGen {
+  def listOf[A](g: Gen[A]): SGen[List[A]] = {
+    SGen(i => Gen.listOfN(i, g))
+  }
 }
 
