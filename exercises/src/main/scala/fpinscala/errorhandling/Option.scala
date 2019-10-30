@@ -1,6 +1,5 @@
 package fpinscala.errorhandling
 
-
 import scala.{Option => _, Some => _, Either => _, _} // hide std library `Option`, `Some` and `Either`, since we are writing our own in this chapter
 
 sealed trait Option[+A] {
@@ -81,23 +80,25 @@ object Option {
       case h :: t => h flatMap (hh => sequence(t) map (hh :: _))
     }
 
+  /*
   //Answer compare: I knew you could do this with map2 but went a different route...
   def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] = a match {
     case h :: t => sequence(List(f(h))) flatMap(hl => traverse(t)(f).map(tl => hl :: tl))
     case Nil => Some(Nil)
     //inefficient
     //sequence(a.map(a => f(a)))
-  }
+  }*/
 
   //correct answer:
-  def traverse_2[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
+  def traverse[A, B](a: List[A])(f: A => Option[B]): Option[List[B]] =
     a match {
       case Nil => Some(Nil)
       case h::t => map2(f(h), traverse(t)(f))(_ :: _)
     }
 
+  /*
   //Answer compare: logically equivalent I think
   def sequence_3[A](a: List[Option[A]]): Option[List[A]] = {
     traverse(a)(elm => Some(elm.getOrElse(Nil)))
-  }
+  }*/
 }

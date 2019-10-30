@@ -18,8 +18,15 @@ trait Stream[+A] {
     case Cons(h, t) => if (f(h())) Some(h()) else t().find(f)
   }
 
+  /*
   def toList: List[A] = {
     this.foldRight(List())((h, acc) => h :: acc)
+  }*/
+
+  // The natural recursive solution
+  def toList: List[A] = this match {
+    case Cons(h,t) => h() :: t().toList
+    case _ => List()
   }
 
   //incorrect
@@ -36,16 +43,33 @@ trait Stream[+A] {
     case _ => empty
   }
 
+  /*
   def drop(n: Int): Stream[A] = this match {
     case Empty => Empty
     case Cons(_, t) if n > 0 => t().drop(n-1)
     case _ => this
+  }*/
+
+  /*
+  Create a new Stream[A] from this, but ignore the n first elements. This can be achieved by recursively calling
+  drop on the invoked tail of a cons cell. Note that the implementation is also tail recursive.
+*/
+  @annotation.tailrec
+  final def drop(n: Int): Stream[A] = this match {
+    case Cons(_, t) if n > 0 => t().drop(n - 1)
+    case _ => this
   }
 
-  def takeWhile(p: A => Boolean): Stream[A] = this match {
+  /*
+  def takeWhile_me(p: A => Boolean): Stream[A] = this match {
     case Empty => Empty
     case Cons(h, t) if p(h) => Cons(h, () => t().takeWhile(p))
     case _ => this
+  }*/
+
+  def takeWhile(f: A => Boolean): Stream[A] = this match {
+    case Cons(h,t) if f(h()) => cons(h(), t() takeWhile f)
+    case _ => empty
   }
 
   def forAll(p: A => Boolean): Boolean = {
@@ -53,35 +77,44 @@ trait Stream[+A] {
   }
 
   def takeWhile_2(p: A => Boolean): Stream[A] = {
-    this.foldRight(Empty[A])((h, t) => if(p(h)) cons(h,t) else Empty)
+    this.foldRight(empty[A])((h, t) => if(p(h)) cons(h,t) else Empty)
   }
 
+  /*
   def headOption: Option[A] = {
     this.foldRight(None[A])((h, _) => Some(h))
-  }
+  }*/
+
+  def headOption: Option[A] =
+    foldRight(None: Option[A])((h,_) => Some(h))
 
   // 5.7 map, filter, append, flatmap using foldRight. Part of the exercise is
   // writing your own function signatures.
 
   def map[B](f: => A => B): Stream[B] = {
-    this.foldRight(Empty[B])((h, t) => cons(f(h), t))
+    this.foldRight(empty[B])((h, t) => cons(f(h), t))
   }
 
   def filter(f: A => Boolean): Stream[A] = {
-    this.foldRight(Empty[A])((h, t) => if(f(h)) cons(h, t) else t)
+    this.foldRight(empty[A])((h, t) => if(f(h)) cons(h, t) else t)
   }
 
   def append[B>:A](l: => Stream[B]): Stream[B] = {
     this.foldRight(l)((h, t) => cons(h, t))
   }
 
-  def flatmap[B](f: A => Option[B]): Stream[Option[B]] = {
-    this.map(f).foldRight(Empty[A])((h, t) => cons(f(h), t))
-  }
+  /*
+  def flatMap[B](f: A => Option[B]): Stream[Option[B]] = {
+    this.map(f).foldRight(empty[A])((h, t) => cons(f(h), t))
+  }*/
 
+  def flatMap[B](f: A => Stream[B]): Stream[B] =
+    foldRight(empty[B])((h,t) => f(h) append t)
+
+  /*
   def map2[B](f: => A => B): Stream[B] = {
     Stream.unfold(this)({case Stream(h, t: Stream[A]) => Some((f(h), t))})
-  }
+  }*/
 
   //Shame: I gave up on this problem and looked at the answer - turns out I was missing a key concept.
 

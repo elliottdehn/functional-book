@@ -94,8 +94,8 @@ object Par {
       val k = run(es)(p).get
       run(es)(choices(k))
     }
-
-  def chooser[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = {
+/*
+  def chooser_me[A,B](pa: Par[A])(choices: A => Par[B]): Par[B] = {
     es => choices(run(es)(pa).get())(es)
   }
 
@@ -123,9 +123,10 @@ object Par {
     chooser(key)(k => choices(k))
   }
 
-  def join[A](a: Par[Par[A]]): Par[A] = {
+  def join_me[A](a: Par[Par[A]]): Par[A] = {
     es => run(es)(a).get()(es)
   }
+ */
 
   //Correct:
   // see nonblocking implementation in `Nonblocking.scala`

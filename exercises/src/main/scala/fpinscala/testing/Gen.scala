@@ -2,11 +2,7 @@ package fpinscala.testing
 
 import fpinscala.laziness.Stream
 import fpinscala.state._
-import fpinscala.parallelism._
-import fpinscala.parallelism.Par.Par
-import Gen._
 import Prop._
-import java.util.concurrent.{Executors,ExecutorService}
 import language.postfixOps
 import language.implicitConversions
 
@@ -16,6 +12,7 @@ shell, which you can fill in and modify while working through the chapter.
 */
 
 case class Prop(run: (MaxSize,TestCases,RNG) => Result) {
+
   def &&(p: Prop) = Prop {
     (max,n,rng) => run(max,n,rng) match {
       case Passed => p.run(max, n, rng)
@@ -61,7 +58,6 @@ object Prop {
   case object Proved extends Result {
     def isFalsified = false
   }
-
 
   /* Produce an infinite random stream from a `Gen` and a starting `RNG`. */
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] =
@@ -117,6 +113,7 @@ object Prop {
 }
 
 case class Gen[+A](sample: State[RNG, A]) {
+
   def map[B](f: A => B): Gen[B] = {
     Gen(sample.map(f))
   }
@@ -128,9 +125,17 @@ case class Gen[+A](sample: State[RNG, A]) {
     }))
   }
 
-  def listOfN(size: Gen[Int]): Gen[List[A]] = {
+  def listOfN_me(size: Gen[Int]): Gen[List[A]] = {
     size.flatMap(i => Gen(State.sequence(List.fill(i)(sample))))
   }
+
+  /* A method alias for the function we wrote earlier. */
+  def listOfN(size: Int): Gen[List[A]] =
+    Gen.listOfN(size, this)
+
+  /* A version of `listOfN` that generates the size to use dynamically. */
+  def listOfN(size: Gen[Int]): Gen[List[A]] =
+    size flatMap (n => this.listOfN(n))
 
   implicit def unsized: SGen[A] = {
     SGen(_ => this)
@@ -192,5 +197,6 @@ object SGen {
   def listOf[A](g: Gen[A]): SGen[List[A]] = {
     SGen(i => Gen.listOfN(i, g))
   }
+  def listOf1[A](g: Gen[A]): SGen[List[A]] =
+    SGen(n => g.listOfN(n max 1))
 }
-

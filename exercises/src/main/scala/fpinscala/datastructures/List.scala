@@ -1,4 +1,6 @@
-//package fpinscala.datastructures
+package fpinscala.datastructures
+
+import fpinscala.datastructures.List.concat
 
 sealed trait List[+A] // `List` data type, parameterized on a type, `A`
 case object Nil extends List[Nothing] // A `List` data constructor representing the empty list
@@ -119,11 +121,14 @@ object List { // `List` companion object. Contains functions for creating and wo
     case _ => foldLeft(l, 0)((x, _) => x + 1)
   }
 
+  /*
   //Answer compare: close. I used a Nil case when I could have used a one-liner with List[A]() for z
   def reverse[A](l: List[A]): List[A] = {
     case Nil => Nil
     case Cons(h, _) => foldLeft(l, Cons(h, Nil))((x,y) => Cons(y, x))
-  }
+  }*/
+
+  def reverse[A](l: List[A]): List[A] = foldLeft(l, List[A]())((acc,h) => Cons(h,acc))
 
   def append_fl[A](l: List[A], app: List[A]): List[A] = {
     foldLeft(reverse(l), app)((acc: List[A], x: A) => Cons(x, acc))
@@ -169,6 +174,7 @@ object List { // `List` companion object. Contains functions for creating and wo
     foldRight(l, Nil:List[A])((ne, acc) => if(f(ne)) Cons(ne, acc) else acc)
   }
 
+  /*
   //Answer comparison: could have used map and made this a lot simpler
   def flatMap[A, B](l: List[A], f: A => List[A]): List[A] = {
     val buf = new collection.mutable.ListBuffer[List[A]]
@@ -178,12 +184,25 @@ object List { // `List` companion object. Contains functions for creating and wo
     }
     go(l)
     flatten(List(buf.toList: _*))
-  }
+  }*/
 
+  def concat[A](l: List[List[A]]): List[A] =
+    foldRight(l, Nil:List[A])(append)
+
+  /*
+  This could also be implemented directly using `foldRight`.
+  */
+  def flatMap[A,B](l: List[A])(f: A => List[B]): List[B] =
+    concat(map(l)(f))
+
+  /*
   //Answer comparison: dead on!
   def filter_fm[A](l: List[A], f: A => Boolean): List[A] = {
     flatMap(l, x => if (f(x)) Cons(x, Nil) else Nil:List[A])
-  }
+  }*/
+
+  def filterViaFlatMap[A](l: List[A])(f: A => Boolean): List[A] =
+    flatMap(l)(a => if (f(a)) List(a) else Nil)
 
   //Answer compare: close, just didn't have cases for _,Nil and Nil,_
   def addLists(l1: List[Int], l2: List[Int]): List[Int] = (l1, l2) match {
