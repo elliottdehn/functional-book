@@ -1,7 +1,7 @@
-import fpinscala.testing._
+import fpinscala.testing.{Gen, Prop}
 
 val smallInt = Gen.choose(-10,10)
-val maxProp = Prop.forAll(SGen.listOf(smallInt)) { ns =>
-  val max = ns.max
+val maxProp = Prop.forAll(Gen.listOf(smallInt)) { ns =>
+  val max = ns.max'
   !ns.exists(_ > max)
 }

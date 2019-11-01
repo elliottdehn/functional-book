@@ -130,7 +130,7 @@ object RNG {
 
 case class State[S,+A](run: S => (A, S)) {
   def map[B](f: A => B): State[S, B] =
-    flatMap(a => State.unit_s(f(a)))
+    flatMap(a => State.unit(f(a)))
   def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] =
     flatMap(a => sb.map(b => f(a, b)))
   def flatMap[B](f: A => State[S, B]): State[S, B] = State(s => {
@@ -145,12 +145,13 @@ object State {
     def simulateMachine(inputs: List[Input]): State[Machine, (Int, Int)] = {
       State(m => )
     }*/
-    def unit_s[S, A](a: A): State[S, A] =
+
+    def unit[S, A](a: A): State[S, A] =
       State(s => (a, s))
 
     // The idiomatic solution is expressed via foldRight
     def sequence[S,A](sas: List[State[S, A]]): State[S, List[A]] =
-      sas.foldRight(unit_s[S, List[A]](List()))((f, acc) => f.map2(acc)(_ :: _))
+      sas.foldRight(unit[S, List[A]](List()))((f, acc) => f.map2(acc)(_ :: _))
 
     def modify[S](f: S => S): State[S, Unit] = for {
       s <- get // Gets the current state and assigns it to `s`.

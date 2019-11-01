@@ -12,10 +12,9 @@ shell, which you can fill in and modify while working through the chapter.
 */
 
 case class Prop(run: (MaxSize,TestCases,RNG) => Result) {
-
   def &&(p: Prop) = Prop {
     (max,n,rng) => run(max,n,rng) match {
-      case Passed => p.run(max, n, rng)
+      case Passed | Proved => p.run(max, n, rng)
       case x => x
     }
   }
@@ -141,6 +140,9 @@ case class Gen[+A](sample: State[RNG, A]) {
     SGen(_ => this)
   }
 
+  def listOf: SGen[List[A]] = Gen.listOf(this)
+  def listOf1: SGen[List[A]] = Gen.listOf1(this)
+
 }
 
 object Gen {
@@ -148,7 +150,7 @@ object Gen {
     Gen(State(RNG.nonNegativeInt).map(n => start + n % (stopExclusive-start)))
 
   def unit[A](a: => A): Gen[A] = {
-    Gen(State.unit_s(a))
+    Gen(State.unit(a))
   }
 
   def genOption[A](g: Gen[A]): Gen[Option[A]] = {
@@ -169,6 +171,12 @@ object Gen {
 
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] =
     Gen(State.sequence(List.fill(n)(g.sample)))
+
+  def listOf1[A](g: Gen[A]): SGen[List[A]] =
+    SGen(n => g.listOfN(n max 1))
+
+  def listOf[A](g: Gen[A]): SGen[List[A]] =
+    SGen(n => g.listOfN(n))
 
   def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = {
     boolean.flatMap(b => if (b) g1 else g2)
@@ -191,12 +199,4 @@ object Gen {
 }
 
 case class SGen[+A](forSize: Int => Gen[A]) {
-}
-
-object SGen {
-  def listOf[A](g: Gen[A]): SGen[List[A]] = {
-    SGen(i => Gen.listOfN(i, g))
-  }
-  def listOf1[A](g: Gen[A]): SGen[List[A]] =
-    SGen(n => g.listOfN(n max 1))
 }
