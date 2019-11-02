@@ -7,8 +7,20 @@ import language.higherKinds
 trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trait
 
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
-  def char(c: Char): Parser[Char]
+  def char(c: Char): Parser[Char] = {
+    string(c.toString) map (_.charAt(0))
+  }
   def or[A](s1: Parser[A], s2: Parser[A]): Parser[A]
+  def succeed[A](a: A): Parser[A] = {
+    string("") map (_ => a)
+  }
+  def slice[A](p: Parser[A]): Parser[String]
+  def many1[A](P: Parser[A]): Parser[List[A]]
+  def product[A,B](p: Parser[A], p2: Parser[B]): Parser[(A,B)]
+
+  def map2[A,B,C](p: Parser[A], p2: Parser[B])(f: (A, B) => C): Parser[C] = {
+    product(p, p2).map(p => f(p._1, p._2))
+  }
 
   //implicits
   implicit def string(s: String): Parser[String]
@@ -21,10 +33,13 @@ trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trai
   case class ParserOps[A](p: Parser[A]) {
     def |[B>:A](p2: Parser[B]): Parser[B] = self.or(p, p2)
     def or[B>:A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
+    def **[B](p2: => Parser[B]): Parser[(A,B)] = self.product(p, p2)
+    def product[B](p2: => Parser[B]): Parser[(A, B)] = self.product(p, p2)
 
-    def many[B](p: Parser[A])(f: A => B): Parser[B] = ???
-    def listOfN(n: Int, p: Parser[A]): Parser[List[A]] = ???
-    def map[B](a: Parser[A])(f: A => B): Parser[B] = ???
+
+    def many[B](f: A => B): Parser[B] = ???
+    def listOfN(n: Int): Parser[List[A]] = ???
+    def map[B](f: A => B): Parser[B] = ???
   }
 
   object Laws {
@@ -32,7 +47,7 @@ trait Parsers[Parser[+_]] { self => // so inner classes may call methods of trai
       Prop.forAll(in)(s => run(p1)(s) == run(p2)(s))
 
     def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop =
-      equal(p, map(p)(a => a))(in)
+      equal(p, p.many(a => a))(in)
   }
 }
 
