@@ -42,6 +42,7 @@ trait Parsers { self => // so inner classes may call methods of trait
       case Success(a, _) => Right(a)
     }
   }
+  //worked on functional stuff that was work related today, might work on the website tomorrowq
 
   def slice[A](p: Parser[A]): Parser[String] = ???
   //l: Location => run(p)(l.input.substring(l.offset))
